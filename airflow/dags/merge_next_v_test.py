@@ -8,7 +8,8 @@ import os
 import threading
 import sys
 
-from modules.bunjang_crawler import update_products, save_to_json
+sys.path.append('/opt/airflow/modules')
+from bunjang_crawler import update_products, save_to_json
 
 default_args = {
     'owner': 'airflow',
@@ -17,7 +18,7 @@ default_args = {
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    'retry_delay': timedelta(minutes=1),
 }
 
 dag = DAG(
@@ -28,18 +29,16 @@ dag = DAG(
     max_active_runs=1,
 )
 
-
 def merge_results_task(**kwargs):
     brand = kwargs['dag_run'].conf.get('brand', 'default_brand')
     today = datetime.now().strftime("%Y%m%d")
-    input_file = f"../output/{brand}_update_{today}.json"
-
+    input_file = f"/opt/airflow/output/{brand}_update_{today}.json"
     print(f"Starting merge task for brand: {brand}")
     print(f"Input file: {input_file}")
 
     with open(input_file, "r", encoding="utf-8") as file:
         update_data = json.load(file)
-        print(f"Loaded {len(update_data)} records from {input_file}")
+    print(f"Loaded {len(update_data)} records from {input_file}")
 
     cluster = Cluster(['cassandra'])
     session = cluster.connect('bunjang')
@@ -52,31 +51,24 @@ def merge_results_task(**kwargs):
             """,
             (product['pid'],)
         )
-
         if result:
             existing_product = result.one()
-
             # 브랜드 업데이트
             brands = set(existing_product.brands)
             brands.update(product['brands'])
-
             # 시간:가격 값 업데이트
             price_updates = existing_product.price_updates
             new_price_updates = product['price_updates']
-
             for update in new_price_updates:
                 update_time = list(update.keys())[0]
                 if update_time not in [list(p.keys())[0] for p in price_updates]:
                     price_updates.append(update)
-
             # 상태 업데이트
             status = product['status'] if product['status'] != existing_product.status else existing_product.status
 
             session.execute(
                 """
-                UPDATE products
-                SET brands = %s, name = %s, price_updates = %s, product_image = %s, status = %s, category_id = %s
-                WHERE pid = %s
+                UPDATE products SET brands = %s, name = %s, price_updates = %s, product_image = %s, status = %s, category_id = %s WHERE pid = %s
                 """,
                 (
                     list(brands),

@@ -6,8 +6,9 @@ from pytz import timezone
 import json
 import sys
 import os
-
 sys.path.append('/opt/airflow/modules')
+
+
 from bunjang_crawler import collect_and_filter_data, save_to_json, update_products,get_updated_products
 
 KST = timezone('Asia/Seoul')
