@@ -7,9 +7,9 @@ import json
 import sys
 import os
 
-sys.path.append('/opt/airflow/modules')
 
-from bunjang_crawler import collect_and_filter_data, save_to_json, update_products, get_updated_products
+
+from modules.bunjang_crawler import collect_and_filter_data, save_to_json, update_products, get_updated_products
 default_args = {
     'owner': 'airflow',
     'depends_on_past': False,
@@ -30,32 +30,34 @@ dag = DAG(
 
 def crawl_and_filter_brand(brand, **kwargs):
     today = datetime.now().strftime("%Y%m%d")
-    output_file = f"/opt/airflow/output/{brand[0]}_{today}_products.json"
+    output_file = f"../output/{brand[0]}_{today}_products.json"
     collect_and_filter_data(brand, output_file)
 
 
 def compare_brand_data(brand, **kwargs):
     today = datetime.now().strftime("%Y%m%d")
-    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
-    today_file = f"/opt/airflow/output/{brand[0]}_{today}_products.json"
-    yesterday_file = f"/opt/airflow/output/{brand[0]}_{yesterday}_products.json"
+    today_file = f"../output/{brand[0]}_{today}_products.json"
 
     with open(today_file, "r", encoding="utf-8") as file:
         today_data = json.load(file)
 
-    if os.path.exists(yesterday_file):
-        with open(yesterday_file, "r", encoding="utf-8") as file:
-            yesterday_data = json.load(file)
+    max_days_ago = 3
+    for days_ago in range(1, max_days_ago + 1):
+        prev_date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y%m%d")
+        prev_file = f"../output/{brand[0]}_{prev_date}_products.json"
 
-        updated_data = get_updated_products(yesterday_data, today_data)
-        output_file = f"/opt/airflow/output/{brand[0]}_update_{today}.json"
-        save_to_json(updated_data, output_file)
+        if os.path.exists(prev_file):
+            with open(prev_file, "r", encoding="utf-8") as file:
+                prev_data = json.load(file)
+            updated_data = get_updated_products(prev_data, today_data)
+            output_file = f"../output/{brand[0]}_update_{today}.json"
+            save_to_json(updated_data, output_file)
+            break
     else:
-        output_file = f"/opt/airflow/output/{brand[0]}_update_{today}.json"
+        output_file = f"../output/{brand[0]}_update_{today}.json"
         save_to_json(today_data, output_file)
 
-
-with open("/opt/airflow/data/brands.json", "r", encoding="utf-8") as file:
+with open("../data/brands.json", "r", encoding="utf-8") as file:
     brand_names = json.load(file)
 
 for brand in brand_names.items():

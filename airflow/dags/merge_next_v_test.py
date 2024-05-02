@@ -8,8 +8,7 @@ import os
 import threading
 import sys
 
-sys.path.append('/opt/airflow/modules')
-from bunjang_crawler import update_products, save_to_json
+from modules.bunjang_crawler import update_products, save_to_json
 
 default_args = {
     'owner': 'airflow',
@@ -33,7 +32,7 @@ dag = DAG(
 def merge_results_task(**kwargs):
     brand = kwargs['dag_run'].conf.get('brand', 'default_brand')
     today = datetime.now().strftime("%Y%m%d")
-    input_file = f"/opt/airflow/output/{brand}_update_{today}.json"
+    input_file = f"../output/{brand}_update_{today}.json"
 
     print(f"Starting merge task for brand: {brand}")
     print(f"Input file: {input_file}")
