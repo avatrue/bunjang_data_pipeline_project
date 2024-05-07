@@ -123,7 +123,7 @@ services:
     ports:
       - "9042:9042"
     volumes:
-      - ./cassandra/data:/var/lib/cassandra
+      - ./cassandra:/var/lib/cassandra
     environment:
       - CASSANDRA_CLUSTER_NAME=my_cluster
 
@@ -306,6 +306,7 @@ services:
 volumes:
   postgres-db-volume:
 networks:
-  airflow_default:
-    driver: bridge
+  default:
+    name: bunjang_data_pipeline_project_default
+    external: true
 
