@@ -1,8 +1,7 @@
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from datetime import datetime, timedelta
-from pytz import timezone
-from cassandra.cluster import Cluster
+from elasticsearch import Elasticsearch
 import json
 import os
 import threading
@@ -29,6 +28,7 @@ dag = DAG(
     max_active_runs=1,
 )
 
+
 def merge_results_task(**kwargs):
     brand = kwargs['dag_run'].conf.get('brand', 'default_brand')
     today = datetime.now().strftime("%Y%m%d")
@@ -40,67 +40,69 @@ def merge_results_task(**kwargs):
         update_data = json.load(file)
     print(f"Loaded {len(update_data)} records from {input_file}")
 
-    cluster = Cluster(['cassandra'])
-    session = cluster.connect('bunjang')
+    es = Elasticsearch(['http://elasticsearch:9200'])
 
     for product in update_data:
-        # 카산드라에있는지 확인
-        result = session.execute(
-            """
-            SELECT * FROM products WHERE pid = %s
-            """,
-            (product['pid'],)
-        )
-        if result:
-            existing_product = result.one()
+        # Elasticsearch에서 문서 확인
+        result = es.search(index='bunjang_products', body={'query': {'match': {'pid': product['pid']}}})
+
+        if result['hits']['total']['value'] > 0:
+            existing_product = result['hits']['hits'][0]['_source']
             # 브랜드 업데이트
-            brands = set(existing_product.brands)
+            brands = set(existing_product['brands'])
             brands.update(product['brands'])
             # 시간:가격 값 업데이트
-            price_updates = existing_product.price_updates
-            new_price_updates = product['price_updates']
+            price_updates = existing_product['price_updates']
+            new_price_updates = [
+                {
+                    'price': int(next(iter(item.values()))),
+                    'updated_at': datetime.fromtimestamp(int(next(iter(item.keys()))))
+                }
+                for item in product['price_updates']
+            ]
             for update in new_price_updates:
-                update_time = list(update.keys())[0]
-                if update_time not in [list(p.keys())[0] for p in price_updates]:
+                if update not in price_updates:
                     price_updates.append(update)
             # 상태 업데이트
-            status = product['status'] if product['status'] != existing_product.status else existing_product.status
+            status = product['status'] if product['status'] != existing_product['status'] else existing_product[
+                'status']
 
-            session.execute(
-                """
-                UPDATE products SET brands = %s, name = %s, price_updates = %s, product_image = %s, status = %s, category_id = %s WHERE pid = %s
-                """,
-                (
-                    list(brands),
-                    product['name'],
-                    price_updates,
-                    product['product_image'],
-                    status,
-                    product['category_id'],
-                    product['pid']
-                )
-            )
+            doc = {
+                'brands': list(brands),
+                'name': product['name'],
+                'price_updates': price_updates,
+                'product_image': product['product_image'],
+                'status': status,
+                'category_id_1': product['category_id'][:3],
+                'category_id_2': product['category_id'][:6],
+                'category_id_3': product['category_id']
+            }
+            es.update(index='bunjang_products', id=result['hits']['hits'][0]['_id'], body={'doc': doc})
             print(f"업데이트: pid: {product['pid']}")
         else:
             # 제품 추가
-            session.execute(
-                """
-                INSERT INTO products (pid, brands, name, price_updates, product_image, status, category_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """,
-                (
-                    product['pid'],
-                    product['brands'],
-                    product['name'],
-                    product['price_updates'],
-                    product['product_image'],
-                    product['status'],
-                    product['category_id']
-                )
-            )
+            doc = {
+                'pid': product['pid'],
+                'brands': product['brands'],
+                'name': product['name'],
+                'price_updates': [
+                    {
+                        'price': int(next(iter(item.values()))),
+                        'updated_at': datetime.fromtimestamp(int(next(iter(item.keys()))))
+                    }
+                    for item in product['price_updates']
+                ],
+                'product_image': product['product_image'],
+                'status': product['status'],
+                'category_id_1': product['category_id'][:3],
+                'category_id_2': product['category_id'][:6],
+                'category_id_3': product['category_id']
+            }
+            es.index(index='bunjang_products', body=doc)
             print(f"제품추가: pid: {product['pid']}")
 
     print(f"Merge task 완료: {brand}")
+
 
 merge_task = PythonOperator(
     task_id='merge_results',
