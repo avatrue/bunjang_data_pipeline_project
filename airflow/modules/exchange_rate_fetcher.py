@@ -1,3 +1,5 @@
+# 한국 수출입 은행에서 환율 수집
+
 import requests
 import logging
 import pytz
@@ -22,9 +24,10 @@ class ExchangeRateFetcher:
 
         if response.status_code == 200:
             data = response.json()
+            logging.info(f"response data : {data}")
             usd = [i for i in data if i["cur_unit"] == "USD"]
             if usd:
-                return usd[0]["deal_bas_r"]
+                return usd[0]["deal_bas_r"].replace(",", "")
             else:
                 return self.get_previous_usd_exchange_rate(utc_now)
         else:
@@ -46,4 +49,4 @@ class ExchangeRateFetcher:
                 data = response.json()
                 usd = [i for i in data if i["cur_unit"] == "USD"]
                 if usd:
-                    return usd[0]["deal_bas_r"]
+                    return usd[0]["deal_bas_r"].replace(",", "")
