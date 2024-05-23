@@ -77,6 +77,7 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/output:/opt/airflow/output
     - ${AIRFLOW_PROJ_DIR:-.}/airflow/modules:/opt/airflow/modules
+    - ./.env:/opt/.env
     - ./requirements.txt:/requirements.txt
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
