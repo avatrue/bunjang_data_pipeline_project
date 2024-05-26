@@ -3,8 +3,6 @@ from airflow.operators.python_operator import PythonOperator
 from datetime import datetime, timedelta
 from elasticsearch import Elasticsearch
 import json
-import os
-import threading
 import sys
 
 sys.path.append('/opt/airflow/modules')
@@ -28,7 +26,6 @@ dag = DAG(
     max_active_runs=1,
 )
 
-
 def merge_results_task(**kwargs):
     brand = kwargs['dag_run'].conf.get('brand', 'default_brand')
     today = datetime.now().strftime("%Y%m%d")
@@ -43,15 +40,12 @@ def merge_results_task(**kwargs):
     es = Elasticsearch(['http://elasticsearch:9200'])
 
     for product in update_data:
-        # Elasticsearch에서 문서 확인
         result = es.search(index='bunjang_products', body={'query': {'match': {'pid': product['pid']}}})
 
         if result['hits']['total']['value'] > 0:
             existing_product = result['hits']['hits'][0]['_source']
-            # 브랜드 업데이트
             brands = set(existing_product['brands'])
             brands.update(product['brands'])
-            # 시간:가격 값 업데이트
             price_updates = existing_product['price_updates']
             new_price_updates = [
                 {
@@ -63,9 +57,7 @@ def merge_results_task(**kwargs):
             for update in new_price_updates:
                 if update not in price_updates:
                     price_updates.append(update)
-            # 상태 업데이트
-            status = product['status'] if product['status'] != existing_product['status'] else existing_product[
-                'status']
+            status = product['status'] if product['status'] != existing_product['status'] else existing_product['status']
 
             doc = {
                 'brands': list(brands),
@@ -80,7 +72,6 @@ def merge_results_task(**kwargs):
             es.update(index='bunjang_products', id=result['hits']['hits'][0]['_id'], body={'doc': doc})
             print(f"업데이트: pid: {product['pid']}")
         else:
-            # 제품 추가
             doc = {
                 'pid': product['pid'],
                 'brands': product['brands'],
@@ -102,7 +93,6 @@ def merge_results_task(**kwargs):
             print(f"제품추가: pid: {product['pid']}")
 
     print(f"Merge task 완료: {brand}")
-
 
 merge_task = PythonOperator(
     task_id='merge_results',

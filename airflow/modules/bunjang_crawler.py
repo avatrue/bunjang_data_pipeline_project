@@ -1,9 +1,9 @@
+# bunjang_crawler.py
+
 import requests
-from urllib.parse import quote
 import json
 import os
-import threading
-import time
+from datetime import datetime, timedelta
 
 def send_api_request(brands, category_id, page):
     base_url = "https://api.bunjang.co.kr/api/1/find_v2.json"
@@ -22,11 +22,6 @@ def send_api_request(brands, category_id, page):
     no_result = data["no_result"]
     total_count = data["categories"][0]["count"]
     return data, no_result, total_count
-
-def get_total_count(brands, category_id):
-    data, _, _ = send_api_request(brands, category_id, 0)
-    total_count = data["categories"][0]["count"]
-    return total_count
 
 def parse_product_data(products, brands):
     product_list = []
@@ -49,7 +44,6 @@ def get_product_list(brands, category_id, page):
     products = data["list"]
     product_list = parse_product_data(products, brands)
     return product_list
-
 
 def update_products(all_products, new_products):
     all_products_dict = {product["pid"]: product for product in all_products}
@@ -98,25 +92,12 @@ def save_to_json(data, filename):
     with open(filename, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
 
-def extract_categories(categories, threshold=30000, include_parent=False):
-    result = []
-    for category in categories:
-        if category["count"] > threshold:
-            if include_parent:
-                result.append({"id": category["id"], "count": category["count"]})
-            if "categories" in category:
-                result.extend(extract_categories(category["categories"], threshold, False))
-        else:
-            result.append({"id": category["id"], "count": category["count"]})
-    return result
-
 def collect_and_filter_data(brands, output_file):
     filtered_products = []
 
     data, _, _ = send_api_request(brands, 320, 0)
     top_level_categories = data["categories"]
     filtered_categories = [{"id": top_level_categories[0]["id"], "count": top_level_categories[0]["count"]}]
-    filtered_categories.extend(extract_categories(top_level_categories, include_parent=False))
 
     total_count = filtered_categories[0]["count"]
     print(f"브랜드 {brands[0]} - 전체 제품 수: {total_count}")
@@ -135,8 +116,6 @@ def collect_and_filter_data(brands, output_file):
             collected_products = parse_product_data(products, brands)
             filtered_products.extend(filter_products(collected_products, brands[0]))
 
-
-
             page += 1
             if page == 300:
                 break
@@ -154,54 +133,3 @@ def filter_products(products, brand_name):
             product["brands"] = [brand_name]
             filtered_products.append(product)
     return filtered_products
-
-def merge_results(input_dir, output_file, lock, brand):
-    print(f"Input directory: {input_dir}")
-    print(f"Output file: {output_file}")
-    print(f"Merging data for brand: {brand}")
-
-    all_products = []
-
-    # 기존 파일이 있는 경우 읽어옴
-    if os.path.exists(output_file):
-        print(f"Reading existing file: {output_file}")
-        with open(output_file, "r", encoding="utf-8") as file:
-            lock.acquire()
-            try:
-                all_products = json.load(file)
-            except json.JSONDecodeError as e:
-                print(f"Failed to parse existing file: {e}")
-                all_products = []
-            finally:
-                lock.release()
-    else:
-        print(f"Creating new file: {output_file}")
-
-    # 특정 브랜드 파일 읽어와서 병합
-    brand_file = os.path.join(input_dir, f"{brand}_products.json")
-    print(f"Reading brand file: {brand_file}")
-    with open(brand_file, "r", encoding="utf-8") as file:
-        try:
-            brand_products = json.load(file)
-        except json.JSONDecodeError as e:
-            print(f"Failed to parse brand file: {brand_file}, error: {e}")
-            brand_products = []
-
-        # 기존 데이터와 중복되지 않는 제품만 추가
-        for product in brand_products:
-            if product not in all_products:
-                all_products.append(product)
-
-    # 병합된 데이터를 파일로 저장
-    print(f"Saving merged data to: {output_file}")
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-    with open(output_file, "w", encoding="utf-8") as file:
-        lock.acquire()
-        try:
-            json.dump(all_products, file, ensure_ascii=False, indent=4)
-        except Exception as e:
-            print(f"Failed to save merged data: {e}")
-        finally:
-            lock.release()
-
-    print(f"Merge completed for brand: {brand}")

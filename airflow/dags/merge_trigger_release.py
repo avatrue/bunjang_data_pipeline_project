@@ -2,18 +2,11 @@ from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from datetime import datetime, timedelta
-from pytz import timezone
 import json
-import sys
 import os
-
-
-
+import sys
 
 sys.path.append('/opt/airflow/modules')
-
-
-
 from bunjang_crawler import collect_and_filter_data, save_to_json, update_products, get_updated_products
 
 default_args = {
@@ -39,7 +32,6 @@ def crawl_and_filter_brand(brand, **kwargs):
     output_file = f"/opt/airflow/output/{brand[0]}_{today}_products.json"
     collect_and_filter_data(brand, output_file)
 
-
 def compare_brand_data(brand, **kwargs):
     today = datetime.now().strftime("%Y%m%d")
     today_file = f"/opt/airflow/output/{brand[0]}_{today}_products.json"
@@ -47,7 +39,7 @@ def compare_brand_data(brand, **kwargs):
     with open(today_file, "r", encoding="utf-8") as file:
         today_data = json.load(file)
 
-    max_days_ago = 7
+    max_days_ago = 3
     for days_ago in range(1, max_days_ago + 1):
         prev_date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y%m%d")
         prev_file = f"/opt/airflow/output/{brand[0]}_{prev_date}_products.json"
