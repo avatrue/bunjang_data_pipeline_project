@@ -304,8 +304,60 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+
+  hadoop:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: hadoop
+    ports:
+      - "9871:9870"  # HDFS web UI
+      - "9001:9000"  # HDFS NameNode
+    environment:
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://hadoop:9000
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+
+  hbase:
+    image: harisekhon/hbase
+    container_name: hbase
+    ports:
+      - "16011:16010"  # HBase Master web UI
+      - "9091:9090"    # HBase Thrift API
+      - "2182:2181"    # Zookeeper
+      - "8086:8085"    # HBase REST API
+    environment:
+      HBASE_HEAPSIZE: 1024
+      HBASE_MANAGES_ZK: 'true'
+    depends_on:
+      - hadoop
+
+  spark-master:
+    image: bitnami/spark:latest
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "7078:7077"  # Spark Master port
+      - "8082:8080"  # Spark Master web UI
+    depends_on:
+      - hadoop
+
+  spark-worker:
+    image: bitnami/spark:latest
+    container_name: spark-worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+    ports:
+      - "8083:8081"  # Spark Worker web UI
+    depends_on:
+      - spark-master 
+  
 volumes:
   postgres-db-volume:
+  hadoop_namenode:
 networks:
   default:
     name: bunjang_data_pipeline_project_default

@@ -2,3 +2,4 @@ cassandra-driver
 yfinance
 fredapi
 python-dotenv
+happybase
