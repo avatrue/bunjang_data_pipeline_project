@@ -45,14 +45,13 @@
 # Feel free to modify this file to suit your needs.
 ---
 x-airflow-common:
-  &airflow-common
   # In order to add custom dependencies or upgrade provider packages you can use your extended image.
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
+  &airflow-common
   image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.8.4}
   # build: .
-  environment:
-    &airflow-common-env
+  environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
@@ -80,8 +79,7 @@ x-airflow-common:
     - ./.env:/opt/.env
     - ./requirements.txt:/requirements.txt
   user: "${AIRFLOW_UID:-50000}:0"
-  depends_on:
-    &airflow-common-depends-on
+  depends_on: &airflow-common-depends-on
     redis:
       condition: service_healthy
     postgres:
@@ -97,7 +95,7 @@ services:
     volumes:
       - postgres-db-volume:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
+      test: [ "CMD", "pg_isready", "-U", "airflow" ]
       interval: 10s
       retries: 5
       start_period: 5s
@@ -108,7 +106,7 @@ services:
     expose:
       - 6379
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 30s
       retries: 50
@@ -129,12 +127,19 @@ services:
       - CASSANDRA_CLUSTER_NAME=my_cluster
 
   airflow-webserver:
+    build: .
     <<: *airflow-common
     command: webserver
     ports:
       - "8080:8080"
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      test:
+        [
+          "CMD",
+          "curl",
+          "--fail",
+          "http://localhost:8080/health"
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -145,13 +150,20 @@ services:
       airflow-init:
         condition: service_completed_successfully
       cassandra:
-        condition: service_started   
+        condition: service_started
 
   airflow-scheduler:
+    build: .
     <<: *airflow-common
     command: scheduler
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      test:
+        [
+          "CMD",
+          "curl",
+          "--fail",
+          "http://localhost:8974/health"
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -165,6 +177,7 @@ services:
         condition: service_started
 
   airflow-worker:
+    build: .
     <<: *airflow-common
     command: celery worker
     healthcheck:
@@ -190,10 +203,15 @@ services:
         condition: service_started
 
   airflow-triggerer:
+    build: .
     <<: *airflow-common
     command: triggerer
     healthcheck:
-      test: ["CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"']
+      test:
+        [
+          "CMD-SHELL",
+          'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"'
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -207,6 +225,7 @@ services:
         condition: service_started
 
   airflow-init:
+    build: .
     <<: *airflow-common
     entrypoint: /bin/bash
     # yamllint disable rule:line-length
@@ -271,6 +290,7 @@ services:
       - ${AIRFLOW_PROJ_DIR:-.}:/sources
 
   airflow-cli:
+    build: .
     <<: *airflow-common
     profiles:
       - debug
@@ -287,6 +307,7 @@ services:
   # or by explicitly targeted on the command line e.g. docker-compose up flower.
   # See: https://docs.docker.com/compose/profiles/
   flower:
+    build: .
     <<: *airflow-common
     command: celery flower
     profiles:
@@ -294,7 +315,7 @@ services:
     ports:
       - "5555:5555"
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
+      test: [ "CMD", "curl", "--fail", "http://localhost:5555/" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -309,8 +330,8 @@ services:
     image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
     container_name: hadoop
     ports:
-      - "9871:9870"  # HDFS web UI
-      - "9001:9000"  # HDFS NameNode
+      - "9871:9870" # HDFS web UI
+      - "9001:9000" # HDFS NameNode
     environment:
       - CLUSTER_NAME=test
       - CORE_CONF_fs_defaultFS=hdfs://hadoop:9000
@@ -321,10 +342,10 @@ services:
     image: harisekhon/hbase
     container_name: hbase
     ports:
-      - "16011:16010"  # HBase Master web UI
-      - "9091:9090"    # HBase Thrift API
-      - "2182:2181"    # Zookeeper
-      - "8086:8085"    # HBase REST API
+      - "16011:16010" # HBase Master web UI
+      - "9091:9090" # HBase Thrift API
+      - "2182:2181" # Zookeeper
+      - "8086:8085" # HBase REST API
     environment:
       HBASE_HEAPSIZE: 1024
       HBASE_MANAGES_ZK: 'true'
@@ -337,8 +358,8 @@ services:
     environment:
       - SPARK_MODE=master
     ports:
-      - "7078:7077"  # Spark Master port
-      - "8082:8080"  # Spark Master web UI
+      - "7078:7077" # Spark Master port
+      - "8082:8080" # Spark Master web UI
     depends_on:
       - hadoop
 
@@ -351,10 +372,10 @@ services:
       - SPARK_WORKER_MEMORY=1G
       - SPARK_WORKER_CORES=1
     ports:
-      - "8083:8081"  # Spark Worker web UI
+      - "8083:8081" # Spark Worker web UI
     depends_on:
-      - spark-master 
-  
+      - spark-master
+
 volumes:
   postgres-db-volume:
   hadoop_namenode:
@@ -362,4 +383,3 @@ networks:
   default:
     name: bunjang_data_pipeline_project_default
     external: true
-
