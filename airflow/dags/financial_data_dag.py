@@ -8,6 +8,7 @@ import logging
 import sys
 import json
 import os
+import happybase
 from dotenv import load_dotenv
 
 load_dotenv(dotenv_path="/opt/.env")
@@ -21,6 +22,7 @@ from fred_data_fetcher import FredDataFetcher
 def fetch_financial_data(**kwargs) -> None:
     EXCHANGE_API_KEY = os.getenv("EXCHANGE_API_KEY")
     FRED_API_KEY = os.getenv("FRED_API_KEY")
+    HBASE_HOST = os.getenv("HBASE_HOST")
 
     execution_date = kwargs["execution_date"]
 
@@ -61,6 +63,13 @@ def fetch_financial_data(**kwargs) -> None:
         json.dump(data, file)
 
     logging.info(f"Data saved as json: {data}")
+
+    # db connection
+    connection = happybase.Connection(HBASE_HOST)
+    table = connection.table('financial_data')
+    table.put(data["date"], {f'data:{k}': str(v) for k, v in data.items()})
+
+    logging.info(f"Data saved to HBase: {data}")
 
 
 logging.basicConfig(level=logging.INFO)

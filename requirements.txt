@@ -3,3 +3,4 @@ yfinance
 fredapi
 python-dotenv
 happybase
+pyspark
