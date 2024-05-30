@@ -65,9 +65,9 @@ def fetch_financial_data(**kwargs) -> None:
     logging.info(f"Data saved as json: {data}")
 
     # db connection
-    connection = happybase.Connection(HBASE_HOST)
-    table = connection.table('financial_data')
-    table.put(data["date"], {f'data:{k}': str(v) for k, v in data.items()})
+    connection = happybase.Connection(HBASE_HOST, 9090)
+    table = connection.table("financial_data")
+    table.put(data["date"], {f"data:{k}": str(v) for k, v in data.items()})
 
     logging.info(f"Data saved to HBase: {data}")
 
