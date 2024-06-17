@@ -1,0 +1,20 @@
+# Dockerfile.hbase
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV HBASE_HOME=/usr/local/hbase
+ENV PATH=$PATH:$JAVA_HOME/bin:$HBASE_HOME/bin
+
+RUN apt-get update && \
+    apt-get install -y software-properties-common wget gnupg2 lsb-release unzip openjdk-8-jdk
+
+RUN wget https://downloads.apache.org/hbase/2.4.18/hbase-2.4.18-bin.tar.gz && \
+    tar -xzvf hbase-2.4.18-bin.tar.gz && \
+    mv hbase-2.4.18 /usr/local/hbase
+
+COPY hbase/hbase-site.xml $HBASE_HOME/conf/hbase-site.xml
+
+EXPOSE 16010 16020 16030 2181
+
+CMD ["bash"]

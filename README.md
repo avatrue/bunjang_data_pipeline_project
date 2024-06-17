@@ -27,7 +27,7 @@
 
 ### Docker Compose 실행:
 ```bash
-docker-compose -f docker-compose.yaml -f docker-compose-elk.yml up
+docker-compose -f docker-compose-airflow.yaml -f docker-compose-elk.yaml -f docker-compose-hadoop.yaml up
 ```
 
 ### 환경 설정
