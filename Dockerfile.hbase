@@ -1,20 +1,36 @@
-# Dockerfile.hbase
 FROM ubuntu:20.04
 
+USER root
+
+# 기본 패키지 설치
+RUN apt-get update && apt-get install -y software-properties-common wget gnupg2 lsb-release unzip openjdk-8-jdk
+
+# 환경 변수 설정
 ENV DEBIAN_FRONTEND=noninteractive
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-ENV HBASE_HOME=/usr/local/hbase
-ENV PATH=$PATH:$JAVA_HOME/bin:$HBASE_HOME/bin
+ENV HADOOP_VERSION=3.4.0
+ENV HADOOP_HOME=/opt/hadoop
+ENV HBASE_VERSION=2.4.18
+ENV HBASE_HOME=/opt/hbase
+ENV PATH=$PATH:$HBASE_HOME/bin:$JAVA_HOME/bin
 
-RUN apt-get update && \
-    apt-get install -y software-properties-common wget gnupg2 lsb-release unzip openjdk-8-jdk
+# SSH 설정
+RUN ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa && \
+    cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 
-RUN wget https://downloads.apache.org/hbase/2.4.18/hbase-2.4.18-bin.tar.gz && \
-    tar -xzvf hbase-2.4.18-bin.tar.gz && \
-    mv hbase-2.4.18 /usr/local/hbase
+# Java 설치 확인
+RUN java -version
 
-COPY hbase/hbase-site.xml $HBASE_HOME/conf/hbase-site.xml
+# Hadoop 설치
+RUN wget https://downloads.apache.org/hadoop/common/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz \
+    && tar -xzvf hadoop-$HADOOP_VERSION.tar.gz -C /opt/ \
+    && mv /opt/hadoop-$HADOOP_VERSION /opt/hadoop \
+    && rm hadoop-$HADOOP_VERSION.tar.gz
 
-EXPOSE 16010 16020 16030 2181
+# HBase 설치
+RUN wget https://downloads.apache.org/hbase/$HBASE_VERSION/hbase-$HBASE_VERSION-bin.tar.gz \
+    && tar -xzvf hbase-$HBASE_VERSION-bin.tar.gz -C /opt/ \
+    && mv /opt/hbase-$HBASE_VERSION /opt/hbase \
+    && rm hbase-$HBASE_VERSION-bin.tar.gz
 
-CMD ["bash"]
+CMD ["tail", "-f", "/dev/null"]

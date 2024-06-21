@@ -4,7 +4,15 @@
         <value>hdfs://namenode:9000/hbase</value>
     </property>
     <property>
-        <name>hbase.zookeeper.property.dataDir</name>
-        <value>/usr/local/hbase/zookeeper</value>
+        <name>hbase.zookeeper.quorum</name>
+        <value>zookeeper</value>
+    </property>
+    <property>
+        <name>hbase.zookeeper.property.clientPort</name>
+        <value>2181</value>
+    </property>
+    <property>
+        <name>zookeeper.znode.parent</name>
+        <value>/hbase-unsecure</value>
     </property>
 </configuration>

@@ -27,6 +27,7 @@
 
 ### Docker Compose 실행:
 ```bash
+docker network create bunjang_data_pipeline_project_default
 docker-compose -f docker-compose-airflow.yaml -f docker-compose-elk.yaml -f docker-compose-hadoop.yaml up
 ```
 

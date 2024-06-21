@@ -3,8 +3,8 @@
 # Start SSH service
 service ssh start
 
-# Start Secondary Namenode
-hdfs --daemon start secondarynamenode
+# Start JournalNode
+hdfs --daemon start journalnode
 tail -f $HADOOP_HOME/logs/*.log
 
 # Keep the container running

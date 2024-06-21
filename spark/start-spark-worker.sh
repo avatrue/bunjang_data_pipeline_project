@@ -4,7 +4,7 @@
 service ssh start
 
 # Start Spark Worker
-$SPARK_HOME/sbin/start-slave.sh spark://spark-master:7077
+$SPARK_HOME/sbin/start-worker.sh
 
 # Keep the container running
 tail -f /dev/null

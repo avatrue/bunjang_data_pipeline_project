@@ -1,157 +1,227 @@
+version: '3'
+x-hadoop-common:
+  &hadoop-common
+  environment:
+    - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+    - CORE_CONF_ha.zookeeper.quorum=zookeeper:2181
+  networks:
+    - hadoop
+
 services:
   namenode:
+    <<: *hadoop-common
+    container_name: namenode
     build:
       context: .
       dockerfile: Dockerfile.hadoop
-    environment:
-      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
-    volumes:
-      - namenode-data:/usr/local/hadoop/hadoopdata/hdfs/namenode
     ports:
       - "50070:50070" # NameNode Web UI
-    networks:
-      - hadoop
+    volumes:
+      - ./hadoop/etc/hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./hadoop/etc/hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+      - ./hadoop/etc/hadoop/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml
+      - ./hadoop/start-namenode.sh:/opt/hadoop/start-namenode.sh
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:50070"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
+    command: ["/bin/bash", "-c", "chmod +x /opt/hadoop/start-namenode.sh && /opt/hadoop/start-namenode.sh"]
 
   secondarynamenode:
+    <<: *hadoop-common
+    container_name: secondarynamenode
     build:
       context: .
       dockerfile: Dockerfile.hadoop
-    environment:
-      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
     volumes:
-      - secondarynamenode-data:/usr/local/hadoop/hadoopdata/hdfs/secondarynamenode
+      - ./hadoop/etc/hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./hadoop/etc/hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+      - ./hadoop/etc/hadoop/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml
+      - ./hadoop/start-secondarynamenode.sh:/opt/hadoop/start-secondarynamenode.sh
     ports:
       - "50090:50090" # Secondary NameNode Web UI
-    networks:
-      - hadoop
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:50090"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
+    command: ["/bin/bash", "-c", "chmod +x /opt/hadoop/start-secondarynamenode.sh && /opt/hadoop/start-secondarynamenode.sh"]
 
   datanode:
+    <<: *hadoop-common
+    container_name: datanode
     build:
       context: .
       dockerfile: Dockerfile.hadoop
-    environment:
-      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
     volumes:
-      - datanode-data:/usr/local/hadoop/hadoopdata/hdfs/datanode
-    networks:
-      - hadoop
+      - ./hadoop/etc/hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./hadoop/etc/hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+      - ./hadoop/etc/hadoop/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml
+      - ./hadoop/start-datanode.sh:/opt/hadoop/start-datanode.sh
+    ports:
+       - "9864:9864" # DataNode Web UI
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:9864"] # DataNode Web UI
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
+    command: ["/bin/bash", "-c", "chmod +x /opt/hadoop/start-datanode.sh && /opt/hadoop/start-datanode.sh"]
 
   resourcemanager:
+    <<: *hadoop-common
+    container_name: resourcemanager
     build:
       context: .
       dockerfile: Dockerfile.hadoop
-    environment:
-      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+    volumes:
+      - ./hadoop/etc/hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./hadoop/etc/hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+      - ./hadoop/etc/hadoop/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml
+      - ./hadoop/start-resourcemanager.sh:/opt/hadoop/start-resourcemanager.sh
     ports:
       - "8088:8088" # ResourceManager Web UI
-    networks:
-      - hadoop
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8088/ws/v1/cluster/health"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
+    command: ["/bin/bash", "-c", "chmod +x /opt/hadoop/start-resourcemanager.sh && /opt/hadoop/start-resourcemanager.sh"]
 
   nodemanager:
+    <<: *hadoop-common
+    container_name: nodemanager
     build:
       context: .
       dockerfile: Dockerfile.hadoop
-    environment:
-      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
-    networks:
-      - hadoop
+    volumes:
+      - ./hadoop/etc/hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./hadoop/etc/hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+      - ./hadoop/etc/hadoop/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml
+      - ./hadoop/start-nodemanager.sh:/opt/hadoop/start-nodemanager.sh
+    ports:
+      - "8042:8042" # NodeManager Web UI
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8042/ws/v1/node/health"] # NodeManager Web UI
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
+    command: ["/bin/bash", "-c", "chmod +x /opt/hadoop/start-nodemanager.sh && /opt/hadoop/start-nodemanager.sh"]
 
-  hbase:
+  hbase-master:
+    container_name: hbase-master
     build:
       context: .
       dockerfile: Dockerfile.hbase
-    environment:
-      - HBASE_CONF_hbase_rootdir=hdfs://namenode:9000/hbase
+    volumes:
+      - ./hadoop/etc/hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./hadoop/etc/hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+      - ./hadoop/etc/hadoop/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml
+      - ./hbase/start-hbase-master.sh:/opt/hbase/start-hbase-master.sh
+      - ./hbase/conf/hbase-site.xml:/opt/hbase/conf/hbase-site.xml
     ports:
       - "16010:16010" # HBase Master Web UI
-    networks:
-      - hadoop
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:16010/jmx"]
+      test: [ "CMD", "curl", "--fail", "http://localhost:16010/jmx" ]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
+    command: ["/bin/bash", "-c", "chmod +x /opt/hbase/start-hbase-master.sh && /opt/hbase/start-hbase-master.sh"]
+
+  hbase-regionserver:
+    container_name: hbase-regionserver
+    build:
+      context: .
+      dockerfile: Dockerfile.hbase
+    volumes:
+      - ./hadoop/etc/hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./hadoop/etc/hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+      - ./hadoop/etc/hadoop/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml
+      - ./hbase/start-hbase-regionserver.sh:/opt/hbase/start-hbase-regionserver.sh
+      - ./hbase/conf/hbase-site.xml:/opt/hbase/conf/hbase-site.xml
+    ports:
+      - "16030:16030"
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:16030/jmx" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    command: ["/bin/bash", "-c", "chmod +x /opt/hbase/start-hbase-regionserver.sh && /opt/hbase/start-hbase-regionserver.sh"]
 
   spark-master:
+    container_name: spark-master
     build:
       context: .
       dockerfile: Dockerfile.spark
-    environment:
-      - SPARK_MODE=master
-      - SPARK_MASTER_WEBUI_PORT=8081
-      - SPARK_MASTER_PORT=7077
+    volumes:
+      - ./hadoop/etc/hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./hadoop/etc/hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+      - ./hadoop/etc/hadoop/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml
+      - ./spark/start-spark-master.sh:/opt/spark/start-spark-master.sh
     ports:
-      - "8081:8081" # Spark Master Web UI
-      - "7077:7077" # Spark Master Port
-    networks:
-      - hadoop
+      - "8086:8086" # Spark Master Web UI
+      - "7077:7077" # Spark master Port
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8081"]
+      test: [ "CMD", "curl", "--fail", "http://localhost:8085" ]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
+    command: ["/bin/bash", "-c", "chmod +x /opt/spark/start-spark-master.sh && /opt/spark/start-spark-master.sh"]
 
   spark-worker:
+    container_name: spark-worker
     build:
       context: .
       dockerfile: Dockerfile.spark
-    environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER=spark://spark-master:7077
-      - SPARK_WORKER_WEBUI_PORT=8082
+    volumes:
+      - ./hadoop/etc/hadoop/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml
+      - ./hadoop/etc/hadoop/hdfs-site.xml:/opt/hadoop/etc/hadoop/hdfs-site.xml
+      - ./hadoop/etc/hadoop/yarn-site.xml:/opt/hadoop/etc/hadoop/yarn-site.xml
+      - ./spark/start-spark-worker.sh:/opt/spark/start-spark-worker.sh
     ports:
-      - "8082:8082" # Spark Worker Web UI
-    networks:
-      - hadoop
-    depends_on:
-      - spark-master
+      - "8087:8087" # Spark Master Web UI
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8082"]
+      test: [ "CMD", "curl", "--fail", "http://localhost:8085" ]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
+    command: [ "/bin/bash", "-c", "chmod +x /opt/spark/start-spark-worker.sh && /opt/spark/start-spark-worker.sh" ]
+
+  zookeeper:
+    container_name: zookeeper
+    image: zookeeper:3.7.0
+    ports:
+      - "2181:2181"
+    volumes:
+      - ./zookeeper/config/zoo.cfg:/opt/zookeeper/config/zoo.cfg
+      - ./zookeeper/start-zookeeper.sh:/opt/zookeeper/start-zookeeper.sh
+    networks:
+      - hadoop
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:2181" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    command: [ "/bin/bash", "-c", "chmod +x /opt/zookeeper/start-zookeeper.sh && /opt/zookeeper/start-zookeeper.sh" ]
 
 networks:
-  default:
-    name: bunjang_data_pipeline_project_default
-    external: true
   hadoop:
     driver: bridge
 
 volumes:
   namenode-data:
-  secondarynamenode-data:
   datanode-data:
+  secondarynamenode-data:
+  zookeeper-data:
+  hbase-master-data:
+  hbase-regionserver-data:
