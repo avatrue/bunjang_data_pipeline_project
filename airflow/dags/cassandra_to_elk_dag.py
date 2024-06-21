@@ -24,7 +24,6 @@ dag = DAG(
 )
 
 
-
 def transfer_data():
     # Cassandra 연결 설정
     cluster = Cluster(['cassandra'], port=9042)

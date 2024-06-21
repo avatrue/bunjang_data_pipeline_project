@@ -115,19 +115,6 @@ services:
       start_period: 30s
     restart: always
 
-  cassandra:
-    image: cassandra:latest
-    networks:
-      - default
-    user: "501:20"
-    container_name: cassandra
-    ports:
-      - "9042:9042"
-    volumes:
-      - ./cassandra:/var/lib/cassandra
-    environment:
-      - CASSANDRA_CLUSTER_NAME=my_cluster
-
   airflow-webserver:
     <<: *airflow-common
     command: webserver
@@ -304,6 +291,7 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+
 volumes:
   postgres-db-volume:
 networks:

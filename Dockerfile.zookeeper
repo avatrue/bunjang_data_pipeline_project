@@ -1,0 +1,31 @@
+FROM ubuntu:20.04
+
+USER root
+# 기본 패키지 설치
+RUN apt-get update && apt-get install -y openjdk-8-jdk wget ssh rsync curl
+
+# 환경 변수 설정
+ENV DEBIAN_FRONTEND=noninteractive
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV PATH=$PATH:$JAVA_HOME/bin
+
+# ZooKeeper 설치
+RUN wget https://downloads.apache.org/zookeeper/stable/apache-zookeeper-3.7.0-bin.tar.gz \
+    && tar -xzvf apache-zookeeper-3.7.0-bin.tar.gz -C /opt/ \
+    && mv /opt/apache-zookeeper-3.7.0-bin /opt/zookeeper \
+    && rm apache-zookeeper-3.7.0-bin.tar.gz
+
+
+ENV ZOO_CFG_DIR=/opt/zookeeper/conf
+ENV ZOO_DATA_DIR=/data
+ENV ZOO_LOG_DIR=/data/log
+
+# Java 설치 확인
+RUN java -version
+
+# SSH 설정
+RUN ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa && \
+    cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+
+
+CMD ["/bin/bash"]

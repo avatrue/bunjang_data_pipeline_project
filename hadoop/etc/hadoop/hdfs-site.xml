@@ -1,0 +1,46 @@
+<configuration>
+    <property>
+        <name>dfs.replication</name>
+        <value>1</value>
+    </property>
+    <property>
+        <name>dfs.namenode.name.dir</name>
+        <value>/opt/hadoop/data/nameNode</value>
+    </property>
+    <property>
+        <name>dfs.datanode.data.dir</name>
+        <value>/opt/hadoop/data/dataNode</value>
+    </property>
+    <property>
+        <name>dfs.nameservices</name>
+        <value>hadoop-cluster</value>
+    </property>
+    <property>
+        <name>dfs.ha.namenodes.hadoop-cluster</name>
+        <value>namenode, secondarynamenode</value>
+    </property>
+    <property>
+        <name>dfs.namenode.rpc-address.hadoop-cluster.namenode</name>
+        <value>namenode:8020</value>
+    </property>
+    <property>
+        <name>dfs.namenode.http-address.hadoop-cluster.namenode</name>
+        <value>namenode:50070</value>
+    </property>
+    <property>
+        <name>dfs.namenode.rpc-address.hadoop-cluster.secondarynamenode</name>
+        <value>secondarynamenode:8020</value>
+    </property>
+    <property>
+        <name>dfs.namenode.http-address.hadoop-cluster.secondarynamenode</name>
+        <value>secondarynamenode:50090</value>
+    </property>
+    <property>
+        <name>dfs.client.failover.proxy.provider.hadoop-cluster</name>
+        <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+    </property>
+    <property>
+        <name>dfs.journalnode.edits.dir</name>
+        <value>/opt/hadoop/data/journal</value>
+    </property>
+</configuration>
